@@ -1,8 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -127,27 +125,15 @@ public class Main {
         });
 
 
-
-
-
         //FUNCIONALIDAD
+        //ABRIR
+        subAbrir.addActionListener(e -> {
+            abrirArchivo(tA);
+        });
+
         //GUARDAR
         subGuardar.addActionListener(e -> {
             guardarArchivo(tA);
-            /*
-            JFileChooser selectorCarpetas = new JFileChooser(); //Clase FileChooser, super útil, mejor que hacerlo a mano
-            selectorCarpetas.setDialogTitle("Guardar archivo");
-
-            int eleccionUsuario = selectorCarpetas.showSaveDialog(vP); // vP es tu ventana principal
-
-            if (eleccionUsuario == JFileChooser.APPROVE_OPTION) {
-                java.io.File fileToSave = selectorCarpetas.getSelectedFile();
-                try (java.io.FileWriter fw = new java.io.FileWriter(fileToSave)) {
-                    tA.write(fw);
-                } catch (java.io.IOException ex) {
-                    ex.printStackTrace();
-                }
-            }*/
         });
 
         //SALIR
@@ -155,10 +141,10 @@ public class Main {
             int opcion = preguntarGuardar(vP);
             if (opcion == 0) {//GUARDAR
                 guardarArchivo(tA);
-                vP.dispose();     // Cierra la ventana
-            } else if (opcion == 1) {
+                vP.dispose();   // Cierra la ventana
+            } else if (opcion == 1) {//CERRAR SIN GUARDAR
                 vP.dispose();
-            }//Si seleccionan el 2, no hago nada (Cancelar)
+            }//Si seleccionan el 2, no hago nada (CANCELAR)
         });
     }
 
@@ -168,14 +154,36 @@ public class Main {
      * @return Int de la opción seleccionada
      */
     private static int preguntarGuardar(JFrame padre) {
-        // Opciones personalizadas
-        // Esto se vio en PanelesOpciones.java
+        // Opciones personalizadas (Esto se vio en PanelesOpciones.java)
         Object[] opciones = {"Guardar", "Cerrar sin guardar", "Cancelar"};
 
         // Devuelve el índice de la opción elegida
         int seleccion = JOptionPane.showOptionDialog(padre, "Hay cambios sin guardar. ¿Qué deseas hacer?", "Bloc de notas", JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE, null, opciones, opciones[0]);
 
         return seleccion; // 0 = Guardar, 1 = Cerrar sin guardar, 2 = Cancelar
+    }
+
+    private static void abrirArchivo(JTextArea tA) {
+        JFileChooser exploradorDeCarpetas = new JFileChooser();
+        exploradorDeCarpetas.setDialogTitle("Cargar archivo");
+
+        int eleccionUsuario = exploradorDeCarpetas.showOpenDialog(null); //Muestra ventana dl filechooser para cargar archivos
+
+        if (eleccionUsuario == JFileChooser.APPROVE_OPTION) {//Cuando el usuario elige una opcion valida
+            File archivoACargar = exploradorDeCarpetas.getSelectedFile();
+            try {
+                BufferedReader br = new BufferedReader(new FileReader(archivoACargar));
+                String linea;
+
+                tA.setText("");//Si el textArea tenia contenido debe borrarse antes de escribir nada
+                while ((linea = br.readLine()) != null) {
+                    tA.append(linea + "\n");
+                }
+                br.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static void guardarArchivo(JTextArea tA) {
