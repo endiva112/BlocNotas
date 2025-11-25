@@ -4,11 +4,15 @@ import java.io.*;
 
 public class Main {
     final static String DESARROLLADOR = "Enrique Díaz Valenzuela";
-    final static String VERSIONPROGRAMA = "0.7";
+    final static String VERSIONPROGRAMA = "1.2";
     final static String FECHAMODIFICACION = "25 / 11 / 2025";
 
     private static int tamanyoLetra = 14;
     private static Font tipoFuente = new Font("Arial", Font.PLAIN, tamanyoLetra);
+
+    //variable aux para comprobar si hay cambios
+    private static String contenidoOriginal = "";
+
 
     public static void main(String[] args) {
         JFrame vP = new JFrame();//vP = ventanaPrincipal
@@ -36,12 +40,10 @@ public class Main {
                 //mAr
                 JMenuItem subAbrir = new JMenuItem("Abrir");
                 JMenuItem subGuardar = new JMenuItem("Guardar");
-                //JMenuItem subGuardarComo = new JMenuItem("Guardar como");
                 JMenuItem subSalir = new JMenuItem("Salir");
 
                 mAr.add(subAbrir);
                 mAr.add(subGuardar);
-                //mAr.add(subGuardarComo);
                 mAr.addSeparator();
                 mAr.add(subSalir);
 
@@ -63,18 +65,8 @@ public class Main {
                 mFo.add(subRestablecerConfiguracion);
 
                 //mVe
-                JMenu mZoom = new JMenu("Zoom");
                 JCheckBoxMenuItem subBarraEstado = new JCheckBoxMenuItem("Mostrar barra de estado");
-
-                    //sub Zoom
-                    JMenuItem subAcercar = new JMenuItem("Acercar");
-                    JMenuItem subAlejar = new JMenuItem("Alejar");
-                    JMenuItem subRestablecerZoom = new JMenuItem("Restaurar zoom predeterminado");
-                    mZoom.add(subAcercar);
-                    mZoom.add(subAlejar);
-                    mZoom.add(subRestablecerZoom);
-
-                mVe.add(mZoom);
+                subBarraEstado.setSelected(true);
                 mVe.add(subBarraEstado);
 
                 //mAy
@@ -107,13 +99,56 @@ public class Main {
             infoBar.setOpaque(false);
 
                 //Etiquetas de mi barra de información
-                JLabel infoZoom = new JLabel(" 100 % ");
                 JLabel infoVersion = new JLabel("v " + VERSIONPROGRAMA);
-
-                infoBar.add(infoZoom);
                 infoBar.add(infoVersion);
 
             pI.add(infoBar, BorderLayout.EAST);
+
+        // TOOLBAR
+        JToolBar barraHerramientas = new JToolBar();
+
+        JButton bCopiar = new JButton("Copiar");
+        barraHerramientas.add(bCopiar);
+
+        JButton bCopiarTodo = new JButton("Copiar todo");
+        barraHerramientas.add(bCopiarTodo);
+
+        JButton bPegar = new JButton("Pegar");
+        barraHerramientas.add(bPegar);
+
+        pI.add(barraHerramientas, BorderLayout.WEST);
+
+
+        // MENU CONTEXTUAL
+        JPopupMenu menuContextual = new JPopupMenu();
+
+        JMenuItem mContextCopiar = new JMenuItem("Copiar");
+        menuContextual.add(mContextCopiar);
+
+        JMenuItem mContextPegar = new JMenuItem("Pegar");
+        menuContextual.add(mContextPegar);
+
+        JMenuItem mContextCortar = new JMenuItem("Cortar");
+        menuContextual.add(mContextCortar);
+
+        tA.setComponentPopupMenu(menuContextual);
+
+        //COPIAR
+        bCopiar.addActionListener(e -> tA.copy());
+
+        //COPIAR TODITO
+        bCopiarTodo.addActionListener(e -> {
+            tA.selectAll();
+            tA.copy();
+            tA.setCaretPosition(0); // opcional: deselecciona todito después de copiar
+        });
+
+        //PEGAR
+        bPegar.addActionListener(e -> tA.paste());
+
+        mContextCopiar.addActionListener(e -> tA.copy());
+        mContextPegar.addActionListener(e -> tA.paste());
+        mContextCortar.addActionListener(e -> tA.cut());
 
         //añadir componentes a la vP
         vP.setJMenuBar(mB);
@@ -124,14 +159,7 @@ public class Main {
         vP.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
-                int opcion = preguntarGuardar(vP);
-                if (opcion == 0) {
-                    //guardarArchivo();
-                    vP.dispose();
-                } else if (opcion == 1) {
-                    vP.dispose();
-                }
-                // 2 = Cancelar → no hacemos nada
+                guardarYSalir(tA, vP);
             }
         });
 
@@ -149,13 +177,14 @@ public class Main {
 
         //SALIR
         subSalir.addActionListener(e -> {
-            int opcion = preguntarGuardar(vP);
-            if (opcion == 0) {//GUARDAR
-                guardarArchivo(tA);
-                vP.dispose();   // Cierra la ventana
-            } else if (opcion == 1) {//CERRAR SIN GUARDAR
-                vP.dispose();
-            }//Si seleccionan el 2, no hago nada (CANCELAR)
+            guardarYSalir(tA, vP);
+        });
+
+        //AJUSTE DE LINEA
+        subAjusteLinea.addActionListener(e -> {
+            boolean activado = subAjusteLinea.isSelected();
+            tA.setLineWrap(activado);
+            tA.setWrapStyleWord(activado);
         });
 
         //COLOR DEL FONDO
@@ -183,6 +212,11 @@ public class Main {
             establecerConfiguracionBase(tA);
         });
 
+        //BARRA DE ESTADO
+        subBarraEstado.addActionListener(e -> {
+            pI.setVisible(subBarraEstado.isSelected());
+        });
+
         //A CERCA DE
         subAcercaDe.addActionListener(e -> {
             JOptionPane.showMessageDialog(null,
@@ -194,11 +228,28 @@ public class Main {
         });
     }
 
-    /**
-     * Permite guardar cambios antes de salir, salir sin guardar o cancelar.
-     * @param padre El componente de la UI que lo llama
-     * @return Int de la opción seleccionada
-     */
+    private static boolean hayCambiosSinGuardar(JTextArea tA) {
+        if (tA.getText().equals(contenidoOriginal)) {
+            return false; //No hay cambios
+        } else {
+            return true;  //Si hay cambios
+        }
+    }
+
+    private static void guardarYSalir(JTextArea tA, JFrame ventana) {
+        if (hayCambiosSinGuardar(tA)) {//si hay cambios por guardar
+            int opcion = preguntarGuardar(ventana);
+            if (opcion == 0) {//GUARDAR
+                guardarArchivo(tA);
+                ventana.dispose();   // Cierra la ventana
+            } else if (opcion == 1) {//CERRAR SIN GUARDAR
+                ventana.dispose();
+            }//Si seleccionan el 2, no hago nada (CANCELAR)
+        } else {//si no se han echo cambios permito cerrar el programa del tirón
+            ventana.dispose();
+        }
+    }
+
     private static int preguntarGuardar(JFrame padre) {
         // Opciones personalizadas (Esto se vio en PanelesOpciones.java)
         Object[] opciones = {"Guardar", "Cerrar sin guardar", "Cancelar"};
@@ -224,10 +275,11 @@ public class Main {
                 while ((linea = br.readLine()) != null) {
                     tA.append(linea + "\n");
                 }
+                contenidoOriginal = tA.getText();
                 //Al haber hecho un try con recursos, no necesito cerrar el buffered reader, lo hace el por mi
                 //incluso si ocurriese una excepción
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                JOptionPane.showMessageDialog(null, "Ha ocurrido un error", "Bloc de notas", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -242,19 +294,20 @@ public class Main {
             File archivoAGuardar = exploradorDeCarpetas.getSelectedFile();
             try (FileWriter fw = new FileWriter(archivoAGuardar)) {
                 fw.write(tA.getText());
+                contenidoOriginal = tA.getText();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                JOptionPane.showMessageDialog(null, "Ha ocurrido un error", "Bloc de notas", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private static void modificarColorFondo(Component padre) {
-        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", Color.BLACK);
+        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", padre.getBackground());
         padre.setBackground(colorFondo);
     }
 
     private static void modificarColorLetra(Component padre) {
-        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", Color.BLACK);
+        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", padre.getForeground());
         padre.setForeground(colorFondo);
     }
 
@@ -291,4 +344,5 @@ public class Main {
         padre.setForeground(Color.BLACK);
         padre.setBackground(Color.WHITE);
     }
+
 }
