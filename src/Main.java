@@ -3,6 +3,13 @@ import java.awt.*;
 import java.io.*;
 
 public class Main {
+    final static String DESARROLLADOR = "Enrique Díaz Valenzuela";
+    final static String VERSIONPROGRAMA = "0.7";
+    final static String FECHAMODIFICACION = "25 / 11 / 2025";
+
+    private static int tamanyoLetra = 14;
+    private static Font tipoFuente = new Font("Arial", Font.PLAIN, tamanyoLetra);
+
     public static void main(String[] args) {
         JFrame vP = new JFrame();//vP = ventanaPrincipal
         vP.setTitle("Bloc de notas");
@@ -40,18 +47,20 @@ public class Main {
 
                 //mFo
                 JCheckBoxMenuItem subAjusteLinea = new JCheckBoxMenuItem("Ajuste de línea");
-                JMenuItem subFuente = new JMenuItem("Fuente...");                   //Tamaño
-                JMenuItem subFormatos = new JMenuItem("Formatos");                  //Estilos como negrita
-                JMenuItem subTipografia = new JMenuItem("Tipografía");              //Calibri
-                JMenuItem subColorFormato = new JMenuItem("Color de la fuente");    //Color
+                JMenuItem subColorFondo = new JMenuItem("Color del fondo");
+                JMenuItem subFuente = new JMenuItem("Tamaño de la fuente");             //Tamaño
+                JMenuItem subTipografia = new JMenuItem("Tipografía");                  //Calibri
+                JMenuItem subColorFuente = new JMenuItem("Color de la fuente");         //Color
+                JMenuItem subRestablecerConfiguracion = new JMenuItem("Restablecer configuración");
 
                 mFo.add(subAjusteLinea);
+                mFo.add(subColorFondo);
                 mFo.addSeparator();
                 mFo.add(subFuente);
-                mFo.addSeparator();
                 mFo.add(subTipografia);
-                mFo.add(subFormatos);
-                mFo.add(subColorFormato);
+                mFo.add(subColorFuente);
+                mFo.addSeparator();
+                mFo.add(subRestablecerConfiguracion);
 
                 //mVe
                 JMenu mZoom = new JMenu("Zoom");
@@ -60,10 +69,10 @@ public class Main {
                     //sub Zoom
                     JMenuItem subAcercar = new JMenuItem("Acercar");
                     JMenuItem subAlejar = new JMenuItem("Alejar");
-                    JMenuItem subRestablecer = new JMenuItem("Restaurar zoom predeterminado");
+                    JMenuItem subRestablecerZoom = new JMenuItem("Restaurar zoom predeterminado");
                     mZoom.add(subAcercar);
                     mZoom.add(subAlejar);
-                    mZoom.add(subRestablecer);
+                    mZoom.add(subRestablecerZoom);
 
                 mVe.add(mZoom);
                 mVe.add(subBarraEstado);
@@ -82,6 +91,8 @@ public class Main {
 
             //Componentes pC
             JTextArea tA = new JTextArea();//tA = textArea
+                establecerConfiguracionBase(tA);
+
             JScrollPane sP = new JScrollPane(tA);//sP = scrollPane
 
             pC.add(sP, BorderLayout.CENTER);
@@ -97,7 +108,7 @@ public class Main {
 
                 //Etiquetas de mi barra de información
                 JLabel infoZoom = new JLabel(" 100 % ");
-                JLabel infoVersion = new JLabel("v 0.5");
+                JLabel infoVersion = new JLabel("v " + VERSIONPROGRAMA);
 
                 infoBar.add(infoZoom);
                 infoBar.add(infoVersion);
@@ -124,8 +135,8 @@ public class Main {
             }
         });
 
-
         //FUNCIONALIDAD
+
         //ABRIR
         subAbrir.addActionListener(e -> {
             abrirArchivo(tA);
@@ -146,10 +157,45 @@ public class Main {
                 vP.dispose();
             }//Si seleccionan el 2, no hago nada (CANCELAR)
         });
+
+        //COLOR DEL FONDO
+        subColorFondo.addActionListener(e -> {
+            modificarColorFondo(tA);
+        });
+
+        //TAMAÑO DE LA FUENTE
+        subFuente.addActionListener(e -> {
+            modificarTamanyoLetra(tA);
+        });
+
+        //TIPOGRAFIA
+        subTipografia.addActionListener(e -> {
+            modificarFuenteLetra(tA);
+        });
+
+        //COLOR DE LA FUENTE
+        subColorFuente.addActionListener(e -> {
+            modificarColorLetra(tA);
+        });
+
+        //RESTABLECER VALORES
+        subRestablecerConfiguracion.addActionListener(e -> {
+            establecerConfiguracionBase(tA);
+        });
+
+        //A CERCA DE
+        subAcercaDe.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "Este programa ha sido desarrollado por: " + DESARROLLADOR + "\n" +
+                    "Se encuentra en su versión " + VERSIONPROGRAMA + "\n" +
+                    "La última modificación se hizo el " + FECHAMODIFICACION,
+                    "A cerca de este Bloc de notas",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
     }
 
     /**
-     * Este método me permite guardar cambios antes de salir, salir sin guardar o cancelar.
+     * Permite guardar cambios antes de salir, salir sin guardar o cancelar.
      * @param padre El componente de la UI que lo llama
      * @return Int de la opción seleccionada
      */
@@ -171,15 +217,15 @@ public class Main {
 
         if (eleccionUsuario == JFileChooser.APPROVE_OPTION) {//Cuando el usuario elige una opcion valida
             File archivoACargar = exploradorDeCarpetas.getSelectedFile();
-            try {
-                BufferedReader br = new BufferedReader(new FileReader(archivoACargar));
+            try (BufferedReader br = new BufferedReader(new FileReader(archivoACargar))) {
                 String linea;
 
                 tA.setText("");//Si el textArea tenia contenido debe borrarse antes de escribir nada
                 while ((linea = br.readLine()) != null) {
                     tA.append(linea + "\n");
                 }
-                br.close();
+                //Al haber hecho un try con recursos, no necesito cerrar el buffered reader, lo hace el por mi
+                //incluso si ocurriese una excepción
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -200,5 +246,49 @@ public class Main {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private static void modificarColorFondo(Component padre) {
+        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", Color.BLACK);
+        padre.setBackground(colorFondo);
+    }
+
+    private static void modificarColorLetra(Component padre) {
+        Color colorFondo = JColorChooser.showDialog(padre, "Fondo", Color.BLACK);
+        padre.setForeground(colorFondo);
+    }
+
+    private static void modificarTamanyoLetra(Component padre) {
+        try {
+            tamanyoLetra = Integer.parseInt(JOptionPane.showInputDialog("Introduzca el tamaño de letra que desea (Tamaño actual = "+ tamanyoLetra +"):"));
+            padre.setFont(new Font("Arial", Font.PLAIN, tamanyoLetra));
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(null, "Entrada no válida. Por favor, introduce números enteros.", "Bloc de notas", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private static void modificarFuenteLetra(Component padre) {
+        String[] fuentes = { "Consolas", "Arial", "Impact" };//Fuentes que ofrece mi programa
+
+        JComboBox<String> combo = new JComboBox<>(fuentes);
+        combo.setSelectedItem(padre.getFont().getFamily());
+
+        JPanel panel = new JPanel();
+        panel.add(new JLabel("Fuente:"));
+        panel.add(combo);
+
+        int opcion = JOptionPane.showConfirmDialog(padre, panel,"Seleccionar fuente", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (opcion == JOptionPane.OK_OPTION) {
+            String fuenteSeleccionada = combo.getSelectedItem().toString();
+            Font nuevaFuente = new Font(fuenteSeleccionada, tipoFuente.getStyle(), tipoFuente.getSize());
+            padre.setFont(nuevaFuente);
+        }
+    }
+
+    private static void establecerConfiguracionBase(Component padre) {
+        padre.setFont(new Font("Arial", Font.PLAIN, 14));
+        padre.setForeground(Color.BLACK);
+        padre.setBackground(Color.WHITE);
     }
 }
